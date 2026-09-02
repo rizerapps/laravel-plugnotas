@@ -19,6 +19,14 @@ final class PlugNotasCredentials
     public function __construct(
         public readonly ?string $apiKey = null,
         public readonly string $environment = 'sandbox',
+        /**
+         * CNPJ do prestador (só dígitos ou formatado — os métodos que o usam
+         * removem não-dígitos antes de enviar). Opcional na maioria das
+         * operações, mas obrigatório para `PlugNotasClient::queryNfseByIntegration()`
+         * — sem ele, o método lança `\RuntimeException` em vez de chamar a API.
+         * Quem resolve credenciais por tenant deve propagar o CNPJ da empresa
+         * até aqui se pretende consultar NFS-e por referência de integração.
+         */
         public readonly ?string $cnpj = null,
         public readonly int $timeout = 30,
         public readonly int $retryTimes = 3,
