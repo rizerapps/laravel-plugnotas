@@ -103,9 +103,13 @@ class PlugNotasClient implements NFeClientInterface
      * Get the HTTP client, initializing it if needed.
      * Uses lazy initialization to avoid failures during app bootstrap.
      *
+     * Protected (nao private) de proposito: subclasses de projetos consumidores
+     * precisam desse transporte ja autenticado para cobrir endpoints que este
+     * pacote ainda nao implementa, sem reimplementar autenticacao/retry do zero.
+     *
      * @throws \RuntimeException if API key is not configured
      */
-    private function getClient(): PendingRequest
+    protected function getClient(): PendingRequest
     {
         if ($this->client === null) {
             $this->initializeClient();
@@ -758,8 +762,12 @@ class PlugNotasClient implements NFeClientInterface
 
     /**
      * Handle request exceptions.
+     *
+     * Protected pelo mesmo motivo de getClient(): subclasses que implementam
+     * transporte proprio para endpoints ainda nao cobertos pelo pacote devem
+     * tratar erro de forma consistente com o restante do client.
      */
-    private function handleRequestException(RequestException $e, string $operation): NFeApiException
+    protected function handleRequestException(RequestException $e, string $operation): NFeApiException
     {
         $status = $e->response?->status() ?? 0;
         $body = $e->response?->body() ?? '';
@@ -1019,12 +1027,31 @@ class PlugNotasClient implements NFeClientInterface
 
     /**
      * Query NFS-e by integration ID.
+     *
+     * O endpoint /nfse/integracao/{ref} nao existe na API do PlugNotas — a consulta
+     * correta e por GET /nfse filtrando por prestador + idIntegracao. Exige o CNPJ do
+     * prestador, resolvido de PlugNotasCredentials::$cnpj (quem consome o pacote deve
+     * garantir que as credenciais tragam o CNPJ da empresa).
+     *
+     * @throws \RuntimeException se as credenciais nao tiverem CNPJ configurado
      */
     public function queryNfseByIntegration(string $ref): array
     {
+        if (empty($this->credentials->cnpj)) {
+            throw new \RuntimeException('Consulta de NFS-e por integracao exige CNPJ do prestador em PlugNotasCredentials::$cnpj.');
+        }
+
+        $prestador = preg_replace('/\D/', '', $this->credentials->cnpj);
+
+        $query = [
+            'prestador' => $prestador,
+            'idIntegracao' => $ref,
+            'quantidade' => 1,
+        ];
+
         try {
-            $this->logRequest('GET', "/nfse/integracao/{$ref}");
-            $response = $this->getClient()->get("/nfse/integracao/{$ref}");
+            $this->logRequest('GET', '/nfse', $query);
+            $response = $this->getClient()->get('/nfse', $query);
 
             if ($response->failed()) {
                 throw NFeApiException::fromResponse(self::PROVIDER, $response->status(), $response->json() ?? []);
