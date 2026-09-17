@@ -1,7 +1,7 @@
 # Laravel PlugNotas
 
-Cliente para a API PlugNotas (TecnoSpeed) de emissão de NF-e, extraído do ERP Galvão para reuso em
-outros projetos Laravel (CRAMAQ, Mahana, RR Segurança).
+Cliente para a API PlugNotas (TecnoSpeed) de emissão de NF-e, extraído de um ERP interno para reuso
+em outros projetos Laravel do ecossistema Rizer.
 
 ## O que este pacote é
 
@@ -28,14 +28,11 @@ outros projetos Laravel (CRAMAQ, Mahana, RR Segurança).
 
 ## Instalação
 
-Repositório privado — requer autenticação (deploy key ou PAT fine-grained `Contents: read`) via
-`COMPOSER_AUTH` ou bloco `repositories` tipo `vcs` no `composer.json` do projeto consumidor.
-
 ```bash
 composer require rizerapps/laravel-plugnotas
 ```
 
 ## Origem
 
-Extraído do projeto `galvaodistribuidora` (Grupo Galvão Distribuidora). Ver histórico e decisões de
-extração em `docs/plugnotas/plano-reuso-plugnotas-outros-projetos.md` naquele repositório.
+Extraído de um ERP interno do ecossistema Rizer para permitir reuso do cliente PlugNotas em
+outros projetos Laravel.
