@@ -3,6 +3,11 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionamento
 [SemVer](https://semver.org/lang/pt-BR/).
 
+## [1.4.1] - 2026-09-23
+
+### Alterado
+- `.gitattributes` com `export-ignore`: testes, CI e `phpunit.xml` não vão mais para o `vendor/` dos projetos.
+
 ## [1.4.0] - 2026-09-23
 
 ### Adicionado
