@@ -3,6 +3,13 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionamento
 [SemVer](https://semver.org/lang/pt-BR/).
 
+## [1.4.2] - 2026-09-23
+
+### Corrigido
+- O alias `plugnotas.ip` não sobrescreve mais um alias que o projeto já tenha registrado. Antes, atualizar
+  o pacote num projeto com middleware próprio trocava o middleware em silêncio, e a lista de IPs passava a
+  vir de `plugnotas.webhook_ips` (vazia por padrão), o que desligava a proteção do webhook.
+
 ## [1.4.1] - 2026-09-23
 
 ### Alterado

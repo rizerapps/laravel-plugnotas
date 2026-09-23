@@ -8,6 +8,7 @@ use Rizer\PlugNotas\Client\NfseClientInterface;
 use Rizer\PlugNotas\Client\PlugNotasClient;
 use Rizer\PlugNotas\Credentials\PlugNotasCredentials;
 use Rizer\PlugNotas\Http\Middleware\VerifyPlugNotasIp;
+use Rizer\PlugNotas\PlugNotasServiceProvider;
 
 class PlugNotasServiceProviderTest extends TestCase
 {
@@ -39,6 +40,16 @@ class PlugNotasServiceProviderTest extends TestCase
         $this->app->instance(NFeClientInterface::class, $custom);
 
         $this->assertSame($custom, $this->app->make(NFeClientInterface::class));
+    }
+
+    public function test_nao_sobrescreve_alias_ja_registrado_pelo_projeto(): void
+    {
+        $router = $this->app['router'];
+        $router->aliasMiddleware('plugnotas.ip', 'App\\Http\\Middleware\\MeuMiddleware');
+
+        (new PlugNotasServiceProvider($this->app))->boot($router);
+
+        $this->assertSame('App\\Http\\Middleware\\MeuMiddleware', $router->getMiddleware()['plugnotas.ip']);
     }
 
     public function test_registra_alias_do_middleware_e_comando(): void

@@ -24,7 +24,11 @@ class PlugNotasServiceProvider extends ServiceProvider
 
     public function boot(Router $router): void
     {
-        $router->aliasMiddleware('plugnotas.ip', VerifyPlugNotasIp::class);
+        // Nao sobrescreve um alias que o projeto ja registrou: trocar o middleware
+        // em silencio mudaria de onde vem a lista de IPs e poderia desligar a protecao.
+        if (! array_key_exists('plugnotas.ip', $router->getMiddleware())) {
+            $router->aliasMiddleware('plugnotas.ip', VerifyPlugNotasIp::class);
+        }
 
         if ($this->app->runningInConsole()) {
             $this->publishes([

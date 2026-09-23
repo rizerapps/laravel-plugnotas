@@ -163,6 +163,11 @@ Route::post('/webhooks/plugnotas', [PlugNotasWebhookController::class, 'handle']
   `webhook_trust_cloudflare`. Sem isso, o IP visto é o do proxy e todo webhook é recusado. **Fora do
   Cloudflare, mantenha desligado**, porque o header pode ser forjado.
 
+**Projeto que já tem um middleware próprio com o alias `plugnotas.ip`:** o alias do projeto prevalece, e o
+pacote não o sobrescreve. Para migrar para o do pacote, remova o alias do `Kernel` e mova a lista de IPs
+para `plugnotas.webhook_ips` **no mesmo deploy**. Confira o padrão atual da variável: se hoje ela tem os
+IPs oficiais como valor padrão, mantenha esse padrão na config publicada.
+
 Regras do controller:
 
 - **Ping de verificação**: o PlugNotas manda um POST sem `idIntegracao` ao cadastrar a URL. Responda **200**,
