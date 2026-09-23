@@ -7,3 +7,4 @@ composer.phar
 # Este pacote e uma BIBLIOTECA: o lock nao influencia quem a instala (vale o lock
 # do projeto consumidor), entao fica fora do versionamento.
 composer.lock
+.phpunit.cache

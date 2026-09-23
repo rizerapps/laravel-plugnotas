@@ -23,7 +23,7 @@ use Rizer\PlugNotas\Exceptions\NFeApiException;
  *
  * @see https://docs.plugnotas.com.br
  */
-class PlugNotasClient implements NFeClientInterface
+class PlugNotasClient implements NFeClientInterface, NfseClientInterface
 {
     private const PROVIDER = 'tecnospeed';
 
@@ -124,7 +124,7 @@ class PlugNotasClient implements NFeClientInterface
     private function initializeClient(): void
     {
         if (!$this->credentials->isValid()) {
-            throw new \RuntimeException('Token PlugNotas nao configurado. Defina TECNOSPEED_API_KEY no .env do servidor.');
+            throw new \RuntimeException('Chave de API do PlugNotas nao configurada para o ambiente '.$this->credentials->environment.'. Defina PLUGNOTAS_API_KEY_SANDBOX ou PLUGNOTAS_API_KEY_PRODUCTION no .env.');
         }
 
         $this->client = Http::baseUrl($this->getBaseUrl())
@@ -228,8 +228,6 @@ class PlugNotasClient implements NFeClientInterface
             // TecnoSpeed PlugNotas expects an array of documents
             $payload = [$data];
 
-            $this->logRequest('POST', '/nfe', $payload);
-
             // Add x-empresa-cnpj header to identify the emitting company
             $response = $this->getClient()
                 ->withHeaders(['x-empresa-cnpj' => $cnpj])
@@ -251,8 +249,6 @@ class PlugNotasClient implements NFeClientInterface
     private function handleCreateNFeResponse(Response $response, string $ref): array
     {
         $data = $response->json() ?? [];
-
-        $this->logResponse('createNFe', $response->status(), ['raw' => $data]);
 
         // Handle HTTP errors
         if ($response->failed()) {
@@ -316,8 +312,6 @@ class PlugNotasClient implements NFeClientInterface
     public function queryNFe(string $ref): array
     {
         try {
-            $this->logRequest('GET', "/nfe/{$ref}/resumo");
-
             $response = $this->getClient()->get("/nfe/{$ref}/resumo");
 
             return $this->handleResponse($response, 'queryNFe', $ref);
@@ -335,8 +329,6 @@ class PlugNotasClient implements NFeClientInterface
     public function findPlugnotasIdByRef(string $ref): ?string
     {
         try {
-            $this->logRequest('GET', "/nfe?idIntegracao={$ref}");
-
             $response = $this->getClient()->get('/nfe', ['idIntegracao' => $ref]);
 
             if (!$response->successful()) {
@@ -365,8 +357,6 @@ class PlugNotasClient implements NFeClientInterface
     public function queryByAccessKey(string $accessKey): array
     {
         try {
-            $this->logRequest('GET', "/nfe/{$accessKey}");
-
             $response = $this->getClient()->get("/nfe/{$accessKey}");
 
             return $this->handleResponse($response, 'queryByAccessKey');
@@ -388,8 +378,6 @@ class PlugNotasClient implements NFeClientInterface
         }
 
         try {
-            $this->logRequest('POST', "/nfe/{$ref}/cancelamento", ['justificativa' => $justification]);
-
             $response = $this->getClient()->post("/nfe/{$ref}/cancelamento", [
                 'justificativa' => $justification,
             ]);
@@ -420,8 +408,6 @@ class PlugNotasClient implements NFeClientInterface
             if (!$nfeId) {
                 throw NFeApiException::notFound(self::PROVIDER, $ref);
             }
-
-            $this->logRequest('POST', "/nfe/{$nfeId}/cce", ['correcao' => $correction]);
 
             $response = $this->getClient()->post("/nfe/{$nfeId}/cce", [
                 'correcao' => $correction,
@@ -464,8 +450,6 @@ class PlugNotasClient implements NFeClientInterface
                 'justificativa' => $data['justificativa'],
             ];
 
-            $this->logRequest('POST', '/nfe/inutilizacao', $payload);
-
             $response = $this->getClient()->post('/nfe/inutilizacao', $payload);
 
             return $this->handleResponse($response, 'inutilizar');
@@ -487,8 +471,6 @@ class PlugNotasClient implements NFeClientInterface
             if (!$nfeId) {
                 throw NFeApiException::notFound(self::PROVIDER, $ref);
             }
-
-            $this->logRequest('GET', "/nfe/{$nfeId}/pdf");
 
             $response = $this->getClient()->get("/nfe/{$nfeId}/pdf");
 
@@ -516,8 +498,6 @@ class PlugNotasClient implements NFeClientInterface
                 throw NFeApiException::notFound(self::PROVIDER, $ref);
             }
 
-            $this->logRequest('GET', "/nfe/{$nfeId}/xml");
-
             $response = $this->getClient()->get("/nfe/{$nfeId}/xml");
 
             if ($response->failed()) {
@@ -536,8 +516,6 @@ class PlugNotasClient implements NFeClientInterface
     public function downloadCancellationXml(string $ref): string
     {
         try {
-            $this->logRequest('GET', "/nfe/{$ref}/cancelamento/xml");
-
             $response = $this->getClient()->get("/nfe/{$ref}/cancelamento/xml");
 
             if ($response->failed()) {
@@ -564,8 +542,6 @@ class PlugNotasClient implements NFeClientInterface
                 throw NFeApiException::notFound(self::PROVIDER, $ref);
             }
 
-            $this->logRequest('GET', "/nfe/{$nfeId}/xml/cce/{$sequenceNumber}");
-
             $response = $this->getClient()->get("/nfe/{$nfeId}/xml/cce/{$sequenceNumber}");
 
             if ($response->failed()) {
@@ -580,6 +556,10 @@ class PlugNotasClient implements NFeClientInterface
 
     /**
      * {@inheritdoc}
+     *
+     * @deprecated O PlugNotas nao assina webhooks (nao ha HMAC nem secret na
+     *             origem), entao este metodo nao protege nada. Use o middleware
+     *             `plugnotas.ip` (VerifyPlugNotasIp). Sera removido na 2.0.
      */
     public function validateWebhookSignature(string $payload, string $signature): bool
     {
@@ -616,8 +596,7 @@ class PlugNotasClient implements NFeClientInterface
     /**
      * Validate webhook signature for a specific company.
      *
-     * This method loads the webhook secret from the company's settings
-     * and validates the signature.
+     * @deprecated Ver validateWebhookSignature(). Sera removido na 2.0.
      */
     public function validateWebhookSignatureForCompany(string $payload, string $signature, mixed $company = null): bool
     {
@@ -652,8 +631,6 @@ class PlugNotasClient implements NFeClientInterface
 
         // Normalize TecnoSpeed response to internal format
         $data = $this->normalizeResponse($data);
-
-        $this->logResponse($operation, $response->status(), $data);
 
         // Handle HTTP errors
         if ($response->failed()) {
@@ -802,10 +779,6 @@ class PlugNotasClient implements NFeClientInterface
         return NFeApiException::fromResponse(self::PROVIDER, $status, $data);
     }
 
-    private function logRequest(string $method, string $endpoint, ?array $data = null): void {}
-
-    private function logResponse(string $operation, int $status, array $data): void {}
-
     // =========================================================================
     // Certificate Methods
     // =========================================================================
@@ -816,8 +789,6 @@ class PlugNotasClient implements NFeClientInterface
     public function uploadCertificate(string $filePath, string $password, ?string $originalName = null): array
     {
         try {
-            $this->logRequest('POST', '/certificado');
-
             $filename = $originalName ?? basename($filePath);
 
             $response = Http::baseUrl($this->getBaseUrl())
@@ -848,7 +819,6 @@ class PlugNotasClient implements NFeClientInterface
     public function listCertificates(): array
     {
         try {
-            $this->logRequest('GET', '/certificado');
             $response = $this->getClient()->get('/certificado');
 
             if ($response->failed()) {
@@ -867,7 +837,6 @@ class PlugNotasClient implements NFeClientInterface
     public function getCertificate(string $id): array
     {
         try {
-            $this->logRequest('GET', "/certificado/{$id}");
             $response = $this->getClient()->get("/certificado/{$id}");
 
             if ($response->failed()) {
@@ -886,7 +855,6 @@ class PlugNotasClient implements NFeClientInterface
     public function deleteCertificate(string $id): bool
     {
         try {
-            $this->logRequest('DELETE', "/certificado/{$id}");
             $response = $this->getClient()->delete("/certificado/{$id}");
 
             return $response->successful();
@@ -905,7 +873,6 @@ class PlugNotasClient implements NFeClientInterface
     public function registerCompany(array $data): array
     {
         try {
-            $this->logRequest('POST', '/empresa', $data);
             $response = $this->getClient()->post('/empresa', $data);
 
             if ($response->failed()) {
@@ -932,7 +899,6 @@ class PlugNotasClient implements NFeClientInterface
         $cnpj = preg_replace('/\D/', '', $cnpj);
 
         try {
-            $this->logRequest('GET', "/empresa/{$cnpj}");
             $response = $this->getClient()->get("/empresa/{$cnpj}");
 
             // Qualquer resposta 4xx significa empresa não encontrada — trata como não cadastrada
@@ -959,7 +925,6 @@ class PlugNotasClient implements NFeClientInterface
         $cnpj = preg_replace('/\D/', '', $cnpj);
 
         try {
-            $this->logRequest('PATCH', "/empresa/{$cnpj}", $data);
             $response = $this->getClient()->patch("/empresa/{$cnpj}", $data);
 
             if ($response->failed()) {
@@ -984,8 +949,6 @@ class PlugNotasClient implements NFeClientInterface
     {
         try {
             $payload = is_array($data) && isset($data[0]) ? $data : [$data];
-
-            $this->logRequest('POST', '/nfse', $payload);
 
             $response = $this->getClient()->post('/nfse', $payload);
 
@@ -1012,7 +975,6 @@ class PlugNotasClient implements NFeClientInterface
     public function queryNfse(string $id): array
     {
         try {
-            $this->logRequest('GET', "/nfse/{$id}");
             $response = $this->getClient()->get("/nfse/{$id}");
 
             if ($response->failed()) {
@@ -1050,7 +1012,6 @@ class PlugNotasClient implements NFeClientInterface
         ];
 
         try {
-            $this->logRequest('GET', '/nfse', $query);
             $response = $this->getClient()->get('/nfse', $query);
 
             if ($response->failed()) {
@@ -1070,7 +1031,6 @@ class PlugNotasClient implements NFeClientInterface
     {
         try {
             $body = $motivo ? ['motivo' => $motivo] : [];
-            $this->logRequest('POST', "/nfse/cancelar/{$id}", $body);
             $response = $this->getClient()->post("/nfse/cancelar/{$id}", $body);
 
             if ($response->failed()) {
@@ -1089,7 +1049,6 @@ class PlugNotasClient implements NFeClientInterface
     public function downloadNfsePdf(string $id): string
     {
         try {
-            $this->logRequest('GET', "/nfse/pdf/{$id}");
             $response = $this->getClient()->get("/nfse/pdf/{$id}");
 
             if ($response->failed()) {
@@ -1108,7 +1067,6 @@ class PlugNotasClient implements NFeClientInterface
     public function downloadNfseXml(string $id): string
     {
         try {
-            $this->logRequest('GET', "/nfse/xml/{$id}");
             $response = $this->getClient()->get("/nfse/xml/{$id}");
 
             if ($response->failed()) {
@@ -1133,7 +1091,6 @@ class PlugNotasClient implements NFeClientInterface
     public function getWebhook(): array
     {
         try {
-            $this->logRequest('GET', '/webhook');
             $response = $this->getClient()->get('/webhook');
 
             // 4xx significa que nenhum webhook está cadastrado — trata como ausente
@@ -1162,12 +1119,11 @@ class PlugNotasClient implements NFeClientInterface
             $payload = array_filter([
                 'url' => $url,
                 // PlugNotas exige o verbo HTTP que ele deve usar para chamar a URL
-                // configurada; nosso endpoint receptor (/api/webhooks/fiscal) so aceita POST.
+                // configurada; o endpoint receptor do projeto deve aceitar POST.
                 'method' => 'POST',
                 'email' => $options['email'] ?? null,
             ], fn ($value) => $value !== null && $value !== '');
 
-            $this->logRequest('POST', '/webhook', $payload);
             $response = $this->getClient()->post('/webhook', $payload);
 
             if ($response->failed()) {
@@ -1196,7 +1152,6 @@ class PlugNotasClient implements NFeClientInterface
                 'email' => $options['email'] ?? null,
             ], fn ($value) => $value !== null && $value !== '');
 
-            $this->logRequest('PUT', '/webhook', $payload);
             $response = $this->getClient()->put('/webhook', $payload);
 
             if ($response->failed()) {
@@ -1217,7 +1172,6 @@ class PlugNotasClient implements NFeClientInterface
     public function deleteWebhook(): array
     {
         try {
-            $this->logRequest('DELETE', '/webhook');
             $response = $this->getClient()->delete('/webhook');
 
             if ($response->failed()) {
@@ -1240,7 +1194,6 @@ class PlugNotasClient implements NFeClientInterface
     public function verifyWebhook(): array
     {
         try {
-            $this->logRequest('POST', '/webhook/verify');
             $response = $this->getClient()->post('/webhook/verify');
 
             if ($response->failed()) {
@@ -1267,7 +1220,6 @@ class PlugNotasClient implements NFeClientInterface
         $cnpj = preg_replace('/\D/', '', $cnpj);
 
         try {
-            $this->logRequest('GET', "/empresa/{$cnpj}/webhook");
             $response = $this->getClient()->get("/empresa/{$cnpj}/webhook");
 
             if ($response->failed()) {
@@ -1301,7 +1253,6 @@ class PlugNotasClient implements NFeClientInterface
                 'email'  => $options['email'] ?? null,
             ], fn ($value) => $value !== null && $value !== '');
 
-            $this->logRequest('POST', "/empresa/{$cnpj}/webhook", $payload);
             $response = $this->getClient()->post("/empresa/{$cnpj}/webhook", $payload);
 
             if ($response->failed()) {
@@ -1330,7 +1281,6 @@ class PlugNotasClient implements NFeClientInterface
                 'email'  => $options['email'] ?? null,
             ], fn ($value) => $value !== null && $value !== '');
 
-            $this->logRequest('PUT', "/empresa/{$cnpj}/webhook", $payload);
             $response = $this->getClient()->put("/empresa/{$cnpj}/webhook", $payload);
 
             if ($response->failed()) {
@@ -1353,7 +1303,6 @@ class PlugNotasClient implements NFeClientInterface
         $cnpj = preg_replace('/\D/', '', $cnpj);
 
         try {
-            $this->logRequest('DELETE', "/empresa/{$cnpj}/webhook");
             $response = $this->getClient()->delete("/empresa/{$cnpj}/webhook");
 
             if ($response->failed()) {
@@ -1376,7 +1325,6 @@ class PlugNotasClient implements NFeClientInterface
         $cnpj = preg_replace('/\D/', '', $cnpj);
 
         try {
-            $this->logRequest('POST', "/empresa/{$cnpj}/webhook/verify");
             $response = $this->getClient()->post("/empresa/{$cnpj}/webhook/verify");
 
             if ($response->failed()) {
@@ -1387,52 +1335,5 @@ class PlugNotasClient implements NFeClientInterface
         } catch (RequestException $e) {
             throw $this->handleRequestException($e, 'verifyCompanyWebhook');
         }
-    }
-
-    // =========================================================================
-    // Logging Helpers
-    // =========================================================================
-
-    /**
-     * Sanitize data for logging (remove sensitive info).
-     */
-    private function sanitizeLogData(?array $data): ?array
-    {
-        if ($data === null) {
-            return null;
-        }
-
-        $sensitiveFields = [
-            'cpf', 'cnpj', 'cpfDestinatario', 'cnpjDestinatario',
-            'cpfEmitente', 'cnpjEmitente', 'inscricaoEstadual',
-            'cpf_destinatario', 'cnpj_destinatario', 'cpf_emitente', 'cnpj_emitente',
-        ];
-
-        $sanitized = $data;
-
-        foreach ($sensitiveFields as $field) {
-            if (isset($sanitized[$field])) {
-                $sanitized[$field] = '***REDACTED***';
-            }
-        }
-
-        // Also sanitize nested emitente/destinatario objects
-        if (isset($sanitized['emitente']) && is_array($sanitized['emitente'])) {
-            foreach ($sensitiveFields as $field) {
-                if (isset($sanitized['emitente'][$field])) {
-                    $sanitized['emitente'][$field] = '***REDACTED***';
-                }
-            }
-        }
-
-        if (isset($sanitized['destinatario']) && is_array($sanitized['destinatario'])) {
-            foreach ($sensitiveFields as $field) {
-                if (isset($sanitized['destinatario'][$field])) {
-                    $sanitized['destinatario'][$field] = '***REDACTED***';
-                }
-            }
-        }
-
-        return $sanitized;
     }
 }

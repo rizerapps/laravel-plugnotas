@@ -7,8 +7,8 @@ use Rizer\PlugNotas\Support\BrazilianIbgeCodes;
 /**
  * Data Transfer Object for NF-e request to TecnoSpeed PlugNotas API.
  *
- * Generico e sem dependencia de Model — quem monta a partir de um Invoice e o
- * App\Domains\Tax\Mappers\InvoiceToNFePayloadMapper.
+ * Generico e sem dependencia de Model — o projeto consumidor monta o DTO a
+ * partir dos seus proprios dados (ex.: um mapper Invoice -> NFeRequestDTO).
  *
  * IMPORTANT: TecnoSpeed PlugNotas requires:
  * - codigoCidade (IBGE 7-digit code) for addresses
@@ -530,8 +530,8 @@ class NFeRequestDTO
 
             /*
              * NT 2025.001: o grupo "cartao" passou a ser obrigatorio tambem para
-             * PIX (17), alem de Cartao de Credito/Debito (03/04) e 20. Como este ERP
-             * nao tem integracao com TEF/maquininha, informamos "nao integrado" (2),
+             * PIX (17), alem de Cartao de Credito/Debito (03/04) e 20. Como o pacote
+             * nao cobre integracao com TEF/maquininha, informamos "nao integrado" (2),
              * o que dispensa CNPJ da credenciadora e codigo de autorizacao.
              */
             if (in_array($meio, ['03', '04', '17', '20'], true)) {

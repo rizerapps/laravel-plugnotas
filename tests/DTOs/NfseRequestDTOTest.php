@@ -7,8 +7,7 @@ use Rizer\PlugNotas\DTOs\NfseRequestDTO;
 
 /**
  * Trava o formato do payload NFS-e (municipal e nacional) contra a API do
- * PlugNotas. Formato extraido do galvaodistribuidora, unico consumidor que
- * ja emitiu NFS-e real com este payload.
+ * PlugNotas. Formato validado contra emissoes reais de NFS-e.
  */
 class NfseRequestDTOTest extends TestCase
 {
@@ -73,7 +72,7 @@ class NfseRequestDTOTest extends TestCase
         $this->assertSame(
             ['pis' => ['valor' => 10.0], 'cofins' => ['valor' => 5.0]],
             $payload['servico'][0]['retencaoFederal'],
-            'Nome de campo validado contra emissão real no galvaodistribuidora — não é "retencoesFederais".'
+            'Nome de campo validado contra emissão real — não é "retencoesFederais".'
         );
     }
 

@@ -1,38 +1,64 @@
 # Laravel PlugNotas
 
-Cliente para a API PlugNotas (TecnoSpeed) de emissão de NF-e, extraído de um ERP interno para reuso
-em outros projetos Laravel do ecossistema Rizer.
+Cliente para a API PlugNotas (TecnoSpeed) de emissão de NF-e e NFS-e, para projetos Laravel.
 
 ## O que este pacote é
 
-- **Transporte e formato**: cliente HTTP para a API PlugNotas, DTOs de request/response, exceptions,
-  enums fiscais puros (CST/CSOSN/CFOP...) e o middleware de validação de webhook.
-- Sem Model, sem migration, sem `illuminate/database` — cada projeto consumidor implementa seu
-  próprio resolver de credenciais e seu próprio mapeamento de dados de negócio (Invoice, Pedido,
-  etc.) para o payload deste pacote.
+- **Transporte e formato**: cliente HTTP da API PlugNotas (NF-e, NFS-e, certificados, empresas e webhooks),
+  DTOs de request/response, exceptions e códigos IBGE.
+- **Integração com o Laravel**: config publicável, bind das interfaces, middleware de IP do webhook e o comando
+  `plugnotas:install`.
+- Sem Model, sem migration, sem `illuminate/database`. Cada projeto implementa o mapeamento dos seus dados
+  (pedido, fatura etc.) para o payload do pacote e decide o ambiente de cada emissor.
 
 ## O que este pacote NÃO é
 
-- **Não carrega alíquotas nem regras fiscais.** Cronograma de vigência (ex.: transição IBS/CBS),
-  CFOPs e alíquotas ficam na configuração de cada projeto consumidor — são dados com vigência legal,
-  não código de transporte. Publicar uma nova versão deste pacote nunca deveria ser o caminho para
-  corrigir uma alíquota.
-- Não resolve credenciais por tenant/empresa — isso é responsabilidade do projeto consumidor
-  (implementar o contrato de resolver de credenciais exposto pelo pacote).
+- **Não carrega alíquotas nem regras fiscais.** Vigências, CFOPs e alíquotas ficam no projeto: são dados com
+  vigência legal, não código de transporte.
+- **Não decide o ambiente.** Sandbox ou produção é escolha do cliente, guardada no banco pelo projeto. O padrão
+  do pacote é sempre `sandbox`.
 
 ## Requisitos
 
 - PHP ^8.1
-- illuminate/support ^10.0|^11.0|^12.0|^13.0
-- illuminate/http ^10.0|^11.0|^12.0|^13.0
+- Laravel 10, 11, 12 ou 13
 
-## Instalação
+## Instalação rápida
 
-```bash
-composer require rizerapps/laravel-plugnotas
+```json
+"repositories": [
+    { "type": "vcs", "url": "https://github.com/rizerapps/laravel-plugnotas.git" }
+]
 ```
 
-## Origem
+```bash
+composer require rizerapps/laravel-plugnotas:^1.4
+php artisan plugnotas:install
+```
 
-Extraído de um ERP interno do ecossistema Rizer para permitir reuso do cliente PlugNotas em
-outros projetos Laravel.
+O passo a passo completo está em **[docs/INSTALACAO.md](docs/INSTALACAO.md)**: credenciais por emissor, webhook,
+testes, validação em sandbox e problemas conhecidos.
+
+## Uso mínimo
+
+```php
+use Rizer\PlugNotas\Client\PlugNotasClient;
+use Rizer\PlugNotas\Credentials\PlugNotasCredentials;
+
+$client = new PlugNotasClient(
+    PlugNotasCredentials::fromConfig(config('plugnotas'), $emissor->environment, $emissor->cnpj)
+);
+
+$resultado = $client->createNfse($payload);
+```
+
+## Testes
+
+```bash
+composer install
+vendor/bin/phpunit
+```
+
+## Changelog
+
+Ver [CHANGELOG.md](CHANGELOG.md).

@@ -55,6 +55,29 @@ final class PlugNotasCredentials
         );
     }
 
+    /**
+     * Monta as credenciais a partir da config do pacote (`config('plugnotas')`),
+     * escolhendo a chave de API do ambiente informado.
+     *
+     * O ambiente deve vir da configuracao do emissor (banco de dados); sem ele,
+     * vale `default_environment`. Qualquer valor diferente de `production` e
+     * tratado como sandbox — errar para o lado seguro.
+     */
+    public static function fromConfig(array $config, ?string $environment = null, ?string $cnpj = null): self
+    {
+        $environment = $environment ?: ($config['default_environment'] ?? 'sandbox');
+        $environment = $environment === 'production' ? 'production' : 'sandbox';
+
+        return new self(
+            apiKey: ($config['api_keys'][$environment] ?? null) ?: null,
+            environment: $environment,
+            cnpj: $cnpj,
+            timeout: (int) ($config['timeout'] ?? 30),
+            retryTimes: (int) ($config['retry_times'] ?? 3),
+            retryDelay: (int) ($config['retry_delay'] ?? 1000),
+        );
+    }
+
     public function withEnvironment(string $environment): self
     {
         return new self(

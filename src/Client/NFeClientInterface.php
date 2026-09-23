@@ -43,7 +43,7 @@ interface NFeClientInterface
      * @param array $data NF-e data according to the provider API specification
      * @return array Provider response
      *
-     * @throws \App\Domains\Tax\Exceptions\NFeApiException
+     * @throws \Rizer\PlugNotas\Exceptions\NFeApiException
      */
     public function createNFe(string $ref, array $data): array;
 
@@ -53,7 +53,7 @@ interface NFeClientInterface
      * @param string $ref NF-e reference
      * @return array Provider response with current status
      *
-     * @throws \App\Domains\Tax\Exceptions\NFeApiException
+     * @throws \Rizer\PlugNotas\Exceptions\NFeApiException
      */
     public function queryNFe(string $ref): array;
 
@@ -63,7 +63,7 @@ interface NFeClientInterface
      * @param string $accessKey 44-digit access key
      * @return array Provider response
      *
-     * @throws \App\Domains\Tax\Exceptions\NFeApiException
+     * @throws \Rizer\PlugNotas\Exceptions\NFeApiException
      */
     public function queryByAccessKey(string $accessKey): array;
 
@@ -74,7 +74,7 @@ interface NFeClientInterface
      * @param string $justification Cancellation justification (min 15 chars)
      * @return array Provider response
      *
-     * @throws \App\Domains\Tax\Exceptions\NFeApiException
+     * @throws \Rizer\PlugNotas\Exceptions\NFeApiException
      */
     public function cancelNFe(string $ref, string $justification): array;
 
@@ -85,7 +85,7 @@ interface NFeClientInterface
      * @param string $correction Correction text (15-1000 chars)
      * @return array Provider response
      *
-     * @throws \App\Domains\Tax\Exceptions\NFeApiException
+     * @throws \Rizer\PlugNotas\Exceptions\NFeApiException
      */
     public function createCCe(string $ref, string $correction): array;
 
@@ -95,7 +95,7 @@ interface NFeClientInterface
      * @param array $data Inutilizacao data (cnpj, serie, numero_inicial, numero_final, justificativa)
      * @return array Provider response
      *
-     * @throws \App\Domains\Tax\Exceptions\NFeApiException
+     * @throws \Rizer\PlugNotas\Exceptions\NFeApiException
      */
     public function inutilizar(array $data): array;
 
@@ -105,7 +105,7 @@ interface NFeClientInterface
      * @param string $ref NF-e reference
      * @return string PDF binary content
      *
-     * @throws \App\Domains\Tax\Exceptions\NFeApiException
+     * @throws \Rizer\PlugNotas\Exceptions\NFeApiException
      */
     public function downloadDanfe(string $ref): string;
 
@@ -115,7 +115,7 @@ interface NFeClientInterface
      * @param string $ref NF-e reference
      * @return string XML content
      *
-     * @throws \App\Domains\Tax\Exceptions\NFeApiException
+     * @throws \Rizer\PlugNotas\Exceptions\NFeApiException
      */
     public function downloadXml(string $ref): string;
 
@@ -125,7 +125,7 @@ interface NFeClientInterface
      * @param string $ref NF-e reference
      * @return string XML content
      *
-     * @throws \App\Domains\Tax\Exceptions\NFeApiException
+     * @throws \Rizer\PlugNotas\Exceptions\NFeApiException
      */
     public function downloadCancellationXml(string $ref): string;
 
@@ -136,7 +136,7 @@ interface NFeClientInterface
      * @param int $sequenceNumber CCe sequence number (1-20)
      * @return string XML content
      *
-     * @throws \App\Domains\Tax\Exceptions\NFeApiException
+     * @throws \Rizer\PlugNotas\Exceptions\NFeApiException
      */
     public function downloadCCeXml(string $ref, int $sequenceNumber = 1): string;
 
