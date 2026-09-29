@@ -3,6 +3,24 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionamento
 [SemVer](https://semver.org/lang/pt-BR/).
 
+## [1.5.0] - 2026-09-29
+
+### Adicionado
+- `NfseRequestDTO`: campos opcionais do layout nacional (schema `dadosNfseNacional` do PlugNotas), todos
+  no fim do construtor e com `null` por padrão:
+  - `nbsCode` → `servico.codigoNbs`, `contributorCode` → `servico.codigoContribuinte`;
+  - `approximateFederalTaxPercent`, `approximateStateTaxPercent`, `approximateMunicipalTaxPercent` →
+    `servico.tributacaoTotal.{federal,estadual,municipal}.valorPercentual` (Lei 12.741);
+  - `ibsCbsCst`, `ibsCbsClassification`, `ibsCbsOperationCode`, `ibsCbsPersonalUse`, `ibsCbsPurpose` →
+    `servico.ibscbs` (`valores.tributacao.cst`/`cct`, `codigoOperacao`, `operacaoPessoal`, `finalidadeNFSe`);
+  - `additionalInformation` → `informacoesComplementares` (quebras de linha viram espaço);
+  - `simplesApuracao` → `regimeApuracaoTributaria`.
+- `validate()` recusa IBS/CBS sem NBS no layout nacional (rejeição E0322).
+
+### Compatibilidade
+- Sem os campos novos, o payload é o mesmo da 1.4.2, e o layout municipal não muda. No layout nacional,
+  o código de tributação nacional continua sendo o `serviceCode` (`servico.codigo`).
+
 ## [1.4.2] - 2026-09-23
 
 ### Corrigido

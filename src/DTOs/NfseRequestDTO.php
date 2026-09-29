@@ -72,6 +72,26 @@ class NfseRequestDTO
 
         // NFS-e standard: 'municipal' or 'nacional' (reforma tributaria)
         public readonly string $nfseStandard = 'municipal',
+
+        /*
+         * Somente layout nacional (schema `dadosNfseNacional` do PlugNotas). Todos
+         * opcionais: null nao entra no payload, e quem nao os informa envia o mesmo
+         * JSON de antes. O codigo de tributacao nacional (cTribNac) NAO tem campo
+         * proprio: no layout nacional e o `serviceCode` (servico.codigo, 6 digitos).
+         * A opcao do Simples (opSimpNac) vem do regime do cadastro da empresa.
+         */
+        public readonly ?string $nbsCode = null,                 // servico.codigoNbs (cNBS, 9 digitos)
+        public readonly ?string $contributorCode = null,         // servico.codigoContribuinte (cIntContrib)
+        public readonly ?string $additionalInformation = null,   // informacoesComplementares (xInfComp)
+        public readonly ?int $simplesApuracao = null,            // regimeApuracaoTributaria (regApTribSN: 1, 2 ou 3)
+        public readonly ?float $approximateFederalTaxPercent = null,   // servico.tributacaoTotal.federal.valorPercentual
+        public readonly ?float $approximateStateTaxPercent = null,     // servico.tributacaoTotal.estadual.valorPercentual
+        public readonly ?float $approximateMunicipalTaxPercent = null, // servico.tributacaoTotal.municipal.valorPercentual
+        public readonly ?string $ibsCbsCst = null,               // servico.ibscbs.valores.tributacao.cst
+        public readonly ?string $ibsCbsClassification = null,    // servico.ibscbs.valores.tributacao.cct (cClassTrib)
+        public readonly ?string $ibsCbsOperationCode = null,     // servico.ibscbs.codigoOperacao (cIndOp)
+        public readonly ?int $ibsCbsPersonalUse = null,          // servico.ibscbs.operacaoPessoal (indFinal: 0 ou 1)
+        public readonly ?int $ibsCbsPurpose = null,              // servico.ibscbs.finalidadeNFSe (finNFSe: 0 = normal)
     ) {}
 
     /**
@@ -130,6 +150,11 @@ class NfseRequestDTO
 
         if ($this->issValue <= 0) {
             $errors[] = sprintf('Valor ISS invalido: %.2f (deve ser maior que zero)', $this->issValue);
+        }
+
+        // Rejeicao E0322 da NFS-e Nacional: IBS/CBS exige a NBS no servico.
+        if ($this->nfseStandard === 'nacional' && $this->ibsCbsGroup() !== [] && empty($this->nbsCode)) {
+            $errors[] = 'NBS do servico e obrigatoria quando ha IBS/CBS';
         }
 
         if (!empty($errors)) {
@@ -252,6 +277,32 @@ class NfseRequestDTO
             $service['cnae'] = $this->cnae;
         }
 
+        if ($this->nbsCode) {
+            $service['codigoNbs'] = $this->nbsCode;
+        }
+
+        if ($this->contributorCode) {
+            $service['codigoContribuinte'] = $this->contributorCode;
+        }
+
+        $approximateTaxes = array_filter([
+            'federal' => $this->approximateFederalTaxPercent,
+            'estadual' => $this->approximateStateTaxPercent,
+            'municipal' => $this->approximateMunicipalTaxPercent,
+        ], fn (?float $percent) => $percent !== null);
+
+        if ($approximateTaxes !== []) {
+            $service['tributacaoTotal'] = array_map(
+                fn (float $percent) => ['valorPercentual' => $percent],
+                $approximateTaxes,
+            );
+        }
+
+        $ibsCbs = $this->ibsCbsGroup();
+        if ($ibsCbs !== []) {
+            $service['ibscbs'] = $ibsCbs;
+        }
+
         $tomadorEndereco = array_filter([
             'logradouro' => $this->customerAddressStreet,
             'numero' => $this->customerAddressNumber,
@@ -262,6 +313,18 @@ class NfseRequestDTO
             'estado' => $this->customerAddressState,
             'cep' => $this->customerAddressPostalCode,
         ]);
+
+        // Campos da raiz do layout nacional: so entram quando informados.
+        $extra = [];
+
+        if ($this->additionalInformation) {
+            // O webservice nacional nao aceita quebra de linha neste campo.
+            $extra['informacoesComplementares'] = trim(preg_replace('/\s*[\r\n]+\s*/', ' ', $this->additionalInformation));
+        }
+
+        if ($this->simplesApuracao !== null) {
+            $extra['regimeApuracaoTributaria'] = $this->simplesApuracao;
+        }
 
         return [
             'idIntegracao' => $this->providerRef,
@@ -284,7 +347,33 @@ class NfseRequestDTO
                 'endereco' => !empty($tomadorEndereco) ? $tomadorEndereco : null,
             ]),
             'servico' => [$service],
-        ];
+        ] + $extra;
+    }
+
+    /**
+     * Grupo IBS/CBS do servico no layout nacional (`servico.ibscbs`).
+     *
+     * Vazio quando nenhum campo foi informado: o PlugNotas so gera o grupo no XML
+     * se o no existir, e mandar o no vazio pediria a NBS (E0322) sem necessidade.
+     */
+    private function ibsCbsGroup(): array
+    {
+        $tributacao = array_filter([
+            'cst' => $this->ibsCbsCst,
+            'cct' => $this->ibsCbsClassification,
+        ], fn (?string $value) => $value !== null && $value !== '');
+
+        $group = array_filter([
+            'finalidadeNFSe' => $this->ibsCbsPurpose,
+            'operacaoPessoal' => $this->ibsCbsPersonalUse,
+            'codigoOperacao' => $this->ibsCbsOperationCode ?: null,
+        ], fn ($value) => $value !== null);
+
+        if ($tributacao !== []) {
+            $group['valores'] = ['tributacao' => $tributacao];
+        }
+
+        return $group;
     }
 
     /**

@@ -96,6 +96,75 @@ class NfseRequestDTOTest extends TestCase
         $this->assertArrayNotHasKey('municipioPrestacao', $payload, 'municipioPrestacao é exclusivo do layout municipal.');
     }
 
+    /**
+     * Quem nao informa os campos nacionais (cramaq, por exemplo) envia o mesmo
+     * JSON da 1.4.2, chave por chave.
+     */
+    public function test_payload_nacional_sem_os_campos_novos_fica_igual_ao_da_1_4_2(): void
+    {
+        $payload = $this->dto(['nfseStandard' => 'nacional', 'serviceLocationCityCode' => '3550308'])->toArray();
+
+        $this->assertSame(['idIntegracao', 'rps', 'emitente', 'prestador', 'tomador', 'servico'], array_keys($payload));
+        $this->assertSame(['codigo', 'discriminacao', 'iss', 'valor'], array_keys($payload['servico'][0]));
+    }
+
+    /** Nomes conferidos no schema `dadosNfseNacional` de docs.plugnotas.com.br/api.json. */
+    public function test_payload_nacional_leva_os_campos_da_dps(): void
+    {
+        $payload = $this->dto([
+            'nfseStandard' => 'nacional',
+            'serviceCode' => '110201',
+            'nbsCode' => '118029000',
+            'contributorCode' => '8020001',
+            'additionalInformation' => "NOTA EMITIDA POR ME OU EPP\nNAO GERA CREDITO",
+            'simplesApuracao' => 1,
+            'approximateFederalTaxPercent' => 13.45,
+            'approximateStateTaxPercent' => 0.0,
+            'approximateMunicipalTaxPercent' => 2.39,
+            'ibsCbsCst' => '000',
+            'ibsCbsClassification' => '000001',
+            'ibsCbsOperationCode' => '100301',
+            'ibsCbsPersonalUse' => 0,
+            'ibsCbsPurpose' => 0,
+        ])->toArray();
+
+        $servico = $payload['servico'][0];
+
+        $this->assertSame('110201', $servico['codigo'], 'No layout nacional, servico.codigo e o cTribNac.');
+        $this->assertSame('118029000', $servico['codigoNbs']);
+        $this->assertSame('8020001', $servico['codigoContribuinte']);
+        $this->assertSame([
+            'federal' => ['valorPercentual' => 13.45],
+            'estadual' => ['valorPercentual' => 0.0],
+            'municipal' => ['valorPercentual' => 2.39],
+        ], $servico['tributacaoTotal'], 'Zero e informado: so null fica de fora.');
+        $this->assertSame([
+            'finalidadeNFSe' => 0,
+            'operacaoPessoal' => 0,
+            'codigoOperacao' => '100301',
+            'valores' => ['tributacao' => ['cst' => '000', 'cct' => '000001']],
+        ], $servico['ibscbs']);
+        $this->assertSame('NOTA EMITIDA POR ME OU EPP NAO GERA CREDITO', $payload['informacoesComplementares'], 'O webservice nao aceita quebra de linha.');
+        $this->assertSame(1, $payload['regimeApuracaoTributaria']);
+    }
+
+    public function test_campos_nacionais_nao_vazam_para_o_layout_municipal(): void
+    {
+        $payload = $this->dto(['nbsCode' => '118029000', 'ibsCbsCst' => '000', 'simplesApuracao' => 1])->toArray();
+
+        $this->assertArrayNotHasKey('codigoNbs', $payload['servico'][0]);
+        $this->assertArrayNotHasKey('ibscbs', $payload['servico'][0]);
+        $this->assertArrayNotHasKey('regimeApuracaoTributaria', $payload);
+    }
+
+    public function test_validate_exige_nbs_quando_ha_ibs_cbs_no_layout_nacional(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('/NBS do servico/');
+
+        $this->dto(['nfseStandard' => 'nacional', 'ibsCbsCst' => '000'])->validate();
+    }
+
     public function test_telefone_ausente_nao_aparece_no_payload(): void
     {
         $payload = $this->dto(['customerPhone' => null])->toArray();
