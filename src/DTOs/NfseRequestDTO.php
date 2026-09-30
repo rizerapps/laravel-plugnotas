@@ -92,7 +92,21 @@ class NfseRequestDTO
         public readonly ?string $ibsCbsOperationCode = null,     // servico.ibscbs.codigoOperacao (cIndOp)
         public readonly ?int $ibsCbsPersonalUse = null,          // servico.ibscbs.operacaoPessoal (indFinal: 0 ou 1)
         public readonly ?int $ibsCbsPurpose = null,              // servico.ibscbs.finalidadeNFSe (finNFSe: 0 = normal)
+
+        // Numeração automática do PlugNotas (empresa com `nfse.config.rps.numeracaoAutomatica`):
+        // `rps.numero` não vai no payload e o `validate()` não exige `rpsNumber`.
+        public readonly bool $rpsAutomatico = false,
     ) {}
+
+    /** Payload do bloco `rps`: sem `numero` quando o PlugNotas numera. */
+    private function rps(): array
+    {
+        return array_filter([
+            'numero' => $this->rpsAutomatico ? null : (int) $this->rpsNumber,
+            'serie' => $this->rpsSeries,
+            'tipo' => $this->rpsType,
+        ], fn ($valor) => $valor !== null);
+    }
 
     /**
      * Validate required fields before sending to the provider.
@@ -111,7 +125,7 @@ class NfseRequestDTO
             $errors[] = 'Inscricao municipal do prestador e obrigatoria';
         }
 
-        if (empty($this->rpsNumber) || (int) $this->rpsNumber <= 0) {
+        if (!$this->rpsAutomatico && (empty($this->rpsNumber) || (int) $this->rpsNumber <= 0)) {
             $errors[] = 'Numero do RPS e obrigatorio e deve ser um numero inteiro positivo';
         }
 
@@ -222,11 +236,7 @@ class NfseRequestDTO
 
         $payload = [
             'idIntegracao' => $this->providerRef,
-            'rps' => [
-                'numero' => (int) $this->rpsNumber,
-                'serie' => $this->rpsSeries,
-                'tipo' => $this->rpsType,
-            ],
+            'rps' => $this->rps(),
             'prestador' => array_filter([
                 'cpfCnpj' => $this->companyCnpj,
                 'inscricaoMunicipal' => $this->companyInscricaoMunicipal ?: null,
@@ -328,11 +338,7 @@ class NfseRequestDTO
 
         return [
             'idIntegracao' => $this->providerRef,
-            'rps' => [
-                'numero' => (int) $this->rpsNumber,
-                'serie' => $this->rpsSeries,
-                'tipo' => $this->rpsType,
-            ],
+            'rps' => $this->rps(),
             'emitente' => [
                 'tipo' => 1,
                 'codigoCidade' => $this->serviceLocationCityCode,
