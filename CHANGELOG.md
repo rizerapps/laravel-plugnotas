@@ -3,6 +3,18 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionamento
 [SemVer](https://semver.org/lang/pt-BR/).
 
+## [1.6.0] - 2026-09-30
+
+### Adicionado
+- `NfseRequestDTO::$rpsAutomatico` (último parâmetro do construtor, `false` por padrão): para empresa com
+  numeração automática no PlugNotas (`nfse.config.rps.numeracaoAutomatica`). Ligado, o payload sai sem
+  `rps.numero` (série e tipo continuam) e o `validate()` não exige `rpsNumber`. O número dado pelo
+  PlugNotas volta na consulta da nota.
+
+### Compatibilidade
+- Sem o parâmetro, nada muda: `rps.numero` continua obrigatório no `validate()` e presente no payload,
+  nos dois layouts.
+
 ## [1.5.0] - 2026-09-29
 
 ### Adicionado
