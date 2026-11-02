@@ -65,7 +65,7 @@ class NfseRequestDTOTest extends TestCase
         $this->assertArrayNotHasKey('retencaoFederal', $payload['servico'][0], 'Sem retenção, a chave não deve aparecer.');
     }
 
-    public function test_retencoes_federais_usam_a_chave_retencaoFederal_singular(): void
+    public function test_retencoes_federais_usam_a_chave_retencao_federal_singular(): void
     {
         $payload = $this->dto(['pisValue' => 10.0, 'cofinsValue' => 5.0])->toArray();
 
@@ -94,6 +94,31 @@ class NfseRequestDTOTest extends TestCase
         $this->assertSame(['cpfCnpj' => '11222333000181'], $payload['prestador'], 'Layout nacional não inclui inscrição municipal/simplesNacional no prestador.');
         $this->assertSame(6, $payload['servico'][0]['iss']['tipoTributacao']);
         $this->assertArrayNotHasKey('municipioPrestacao', $payload, 'municipioPrestacao é exclusivo do layout municipal.');
+    }
+
+    public function test_payload_nacional_omite_aliquota_do_simples_apurado_no_das_sem_retencao(): void
+    {
+        $iss = $this->dto(['nfseStandard' => 'nacional', 'simplesApuracao' => 1])->toArray()['servico'][0]['iss'];
+
+        $this->assertArrayNotHasKey('aliquota', $iss, 'E0625: o ADN recusa alíquota nesse caso.');
+    }
+
+    public function test_payload_nacional_mantem_aliquota_fora_do_caso_da_e0625(): void
+    {
+        $casos = [
+            'ISS retido' => ['simplesApuracao' => 1, 'issRetained' => true],
+            'apuração 2' => ['simplesApuracao' => 2],
+            'sem apuração informada' => [],
+        ];
+
+        foreach ($casos as $caso => $overrides) {
+            $iss = $this->dto(['nfseStandard' => 'nacional'] + $overrides)->toArray()['servico'][0]['iss'];
+
+            $this->assertSame(5.0, $iss['aliquota'] ?? null, $caso);
+        }
+
+        $municipal = $this->dto(['simplesApuracao' => 1])->toArray();
+        $this->assertSame(5.0, $municipal['servico'][0]['iss']['aliquota'], 'Layout municipal não muda.');
     }
 
     /**

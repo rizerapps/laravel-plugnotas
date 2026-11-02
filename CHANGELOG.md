@@ -3,6 +3,14 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), versionamento
 [SemVer](https://semver.org/lang/pt-BR/).
 
+## [1.6.1] - 2026-11-02
+
+### Corrigido
+- `NfseRequestDTO`, layout nacional: sem `servico.iss.aliquota` quando `simplesApuracao` é `1` (ISS
+  apurado pelo Simples) e o ISS não é retido. O Ambiente Nacional recusa a alíquota nesse caso
+  (rejeição E0625), e o Simples passou a emitir por ele em 01/11/2026 (Resolução CGSN 191/2026).
+  O `validate()` não muda, e quem não informa `simplesApuracao` envia o mesmo payload de antes.
+
 ## [1.6.0] - 2026-09-30
 
 ### Adicionado

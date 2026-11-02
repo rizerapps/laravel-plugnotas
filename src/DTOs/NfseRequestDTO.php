@@ -125,7 +125,7 @@ class NfseRequestDTO
             $errors[] = 'Inscricao municipal do prestador e obrigatoria';
         }
 
-        if (!$this->rpsAutomatico && (empty($this->rpsNumber) || (int) $this->rpsNumber <= 0)) {
+        if (! $this->rpsAutomatico && (empty($this->rpsNumber) || (int) $this->rpsNumber <= 0)) {
             $errors[] = 'Numero do RPS e obrigatorio e deve ser um numero inteiro positivo';
         }
 
@@ -133,12 +133,12 @@ class NfseRequestDTO
             $errors[] = 'Serie do RPS e obrigatoria';
         }
 
-        if (!in_array($this->rpsType, ['1', '2', '3'], true)) {
+        if (! in_array($this->rpsType, ['1', '2', '3'], true)) {
             $errors[] = 'Tipo do RPS invalido (deve ser 1, 2 ou 3)';
         }
 
         $docLen = strlen($this->customerDocument);
-        if (!in_array($docLen, [11, 14], true)) {
+        if (! in_array($docLen, [11, 14], true)) {
             $errors[] = 'CPF/CNPJ do tomador invalido';
         }
 
@@ -171,7 +171,7 @@ class NfseRequestDTO
             $errors[] = 'NBS do servico e obrigatoria quando ha IBS/CBS';
         }
 
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             throw new \InvalidArgumentException('Payload NFS-e invalido: '.implode('; ', $errors));
         }
     }
@@ -219,7 +219,7 @@ class NfseRequestDTO
             'csll' => $this->csllValue > 0 ? ['valor' => $this->csllValue] : null,
         ]);
 
-        if (!empty($retencaoFederal)) {
+        if (! empty($retencaoFederal)) {
             $service['retencaoFederal'] = $retencaoFederal;
         }
 
@@ -250,7 +250,7 @@ class NfseRequestDTO
                 'razaoSocial' => $this->customerName,
                 'email' => $this->customerEmail,
                 'telefone' => self::splitPhoneDdd($this->customerPhone),
-                'endereco' => !empty($tomadorEndereco) ? $tomadorEndereco : null,
+                'endereco' => ! empty($tomadorEndereco) ? $tomadorEndereco : null,
             ]),
             'servico' => [$service],
         ];
@@ -282,6 +282,13 @@ class NfseRequestDTO
                 'servico' => $this->serviceValue,
             ],
         ];
+
+        // Rejeicao E0625 do Ambiente Nacional: Simples com ISS apurado no DAS
+        // (regApTribSN = 1) e sem retencao nao informa aliquota. A prefeitura
+        // aceitava e recalculava; o ADN recusa (CGSN 191/2026, 01/11/2026).
+        if ($this->simplesApuracao === 1 && ! $this->issRetained) {
+            unset($service['iss']['aliquota']);
+        }
 
         if ($this->cnae) {
             $service['cnae'] = $this->cnae;
@@ -350,7 +357,7 @@ class NfseRequestDTO
                 'cpfCnpj' => $this->customerDocument,
                 'razaoSocial' => $this->customerName,
                 'email' => $this->customerEmail,
-                'endereco' => !empty($tomadorEndereco) ? $tomadorEndereco : null,
+                'endereco' => ! empty($tomadorEndereco) ? $tomadorEndereco : null,
             ]),
             'servico' => [$service],
         ] + $extra;
@@ -388,7 +395,7 @@ class NfseRequestDTO
      */
     private static function splitPhoneDdd(?string $phone): ?array
     {
-        if (!$phone) {
+        if (! $phone) {
             return null;
         }
 
